@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using NeatNet.NEAT.Utils;
 
 namespace NeatNet.NEAT.ComplexEntities
 {
@@ -20,9 +21,12 @@ namespace NeatNet.NEAT.ComplexEntities
             for (int i = 0; i < Amount; i++)
             {
                 Genom genom = new Genom(inCount, outCount);
-                genom.AddRandomLink(rnd);
+                genom.AddLink(genom.Inputs[rnd.Next(inCount)], genom.Outputs[rnd.Next(outCount)],
+                    rnd.NextDouble() * 10 - 5);
                 AllNets.Add(genom);
             }
+
+            Speciate();
         }
 
         private void Speciate()
@@ -35,9 +39,10 @@ namespace NeatNet.NEAT.ComplexEntities
                 newSpecies[representative].Add(representative);
             }
 
-            bool isUniq = true;
+            bool isUniq;
             foreach (Genom genom in AllNets)
             {
+                isUniq = true;
                 foreach (Genom specieRepresentative in newSpecies.Keys)
                 {
                     if (genom.GetDistance(specieRepresentative, C1, C2, C3) < DistThreshold)
@@ -58,6 +63,21 @@ namespace NeatNet.NEAT.ComplexEntities
             _species = newSpecies;
         }
 
+        public Genom GetBest(List<Genom> group)
+        {
+            Genom max = new Genom(0, 0);
+            max.Fitness = 0;
+            foreach (Genom genom in group)
+            {
+                if (genom.Fitness > max.Fitness)
+                {
+                    max = genom;
+                }
+            }
+
+            return max;
+        }
+
         public void NextGen()
         {
             Dictionary<List<Genom>, double> speciesFitness = new Dictionary<List<Genom>, double>();
@@ -76,10 +96,13 @@ namespace NeatNet.NEAT.ComplexEntities
                 speciesFitness.Add(spicie, speFitSum);
             }
 
+
             List<Genom> newPopulation = new List<Genom>();
 
             foreach (List<Genom> spicie in speciesFitness.Keys)
             {
+                Genom best = GetBest(spicie);
+
                 foreach (Genom genom in spicie)
                 {
                     int childrenCount = (int) Math.Round(speciesFitness[spicie] / totalSum * Amount * genom.Fitness /
@@ -89,38 +112,47 @@ namespace NeatNet.NEAT.ComplexEntities
                         continue;
                     }
 
-                    Genom child;
-                    if (rnd.NextDouble() <= 0.25)
+                    if (genom.Equals(best))
                     {
-                        child = genom.Clone();
-                        if (rnd.NextDouble() <= 0.8)
-                        {
-                            child.MutateWeights(rnd);
-                        }
-
-                        if (rnd.NextDouble() <= 0.03)
-                        {
-                            child.AddRandomNode(rnd);
-                        }
-
-                        if (rnd.NextDouble() <= 0.05)
-                        {
-                            child.AddRandomLink(rnd);
-                        }
+                        childrenCount--;
+                        newPopulation.Add(ObjectCopier.Clone(genom));
                     }
-                    else
+
+                    for (int i = 0; i < childrenCount; i++)
                     {
-                        if (rnd.NextDouble() < 0.001)
+                        Genom child;
+                        if (rnd.NextDouble() <= 1)
                         {
-                            child = genom.Mate(AllNets[rnd.Next(AllNets.Count)], rnd);
+                            child = genom.Clone();
+                            if (rnd.NextDouble() <= 0.8)
+                            {
+                                child.MutateWeights(rnd);
+                            }
+
+                            if (rnd.NextDouble() <= 0.03)
+                            {
+                                child.AddRandomNode(rnd);
+                            }
+
+                            if (rnd.NextDouble() <= 0.05)
+                            {
+                                child.AddRandomLink(rnd);
+                            }
                         }
                         else
                         {
-                            child = genom.Mate(spicie[rnd.Next(spicie.Count)], rnd);
+                            if (rnd.NextDouble() < 0.001)
+                            {
+                                child = genom.Mate(AllNets[rnd.Next(AllNets.Count)], rnd);
+                            }
+                            else
+                            {
+                                child = genom.Mate(spicie[rnd.Next(spicie.Count)], rnd);
+                            }
                         }
-                    }
 
-                    newPopulation.Add(child);
+                        newPopulation.Add(child);
+                    }
                 }
             }
 
@@ -130,7 +162,24 @@ namespace NeatNet.NEAT.ComplexEntities
 
         private double CalcAdjFitness(Genom genom)
         {
+            if (genom.GetDistance(genom, C1, C2, C3) != 0)
+            {
+                Console.WriteLine("Stary");
+                foreach (var link in genom.LocalLinks)
+                {
+                    Console.WriteLine(link.Input + "->" + link.Output);
+                }
+
+                Console.WriteLine("end");
+            }
+
             int count = AllNets.Count(g => g.GetDistance(genom, C1, C2, C3) < DistThreshold);
+            if (count == 0)
+            {
+                Console.WriteLine("Fuck0");
+                count = 1;
+            }
+
             return genom.Fitness / count;
         }
     }

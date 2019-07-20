@@ -41,7 +41,9 @@ namespace NeatNet.NEAT.ComplexEntities
 
         public Genom Clone()
         {
-            return ObjectCopier.Clone(this);
+            Genom clone = ObjectCopier.Clone(this);
+            clone.Fitness = 0;
+            return clone;
         }
 
 
@@ -62,6 +64,7 @@ namespace NeatNet.NEAT.ComplexEntities
             Link localLink = LocalLinks.Find(l => l.Equals(link));
             if (localLink == null)
             {
+                Console.WriteLine("EXIST");
                 output.Ancestors.Add(input, weight);
                 LocalLinks.Add(link);
             }
@@ -96,6 +99,11 @@ namespace NeatNet.NEAT.ComplexEntities
             Node input = allNodes[rnd.Next(allNodes.Count)];
             allNodes.RemoveAll(n => Inputs.Contains(n));
             Node output = allNodes[rnd.Next(allNodes.Count)];
+            if (input.Equals(output))
+            {
+                return;
+            }
+
             double weight = rnd.NextDouble() * 10 - 5;
             AddLink(input, output, weight);
         }
@@ -191,14 +199,13 @@ namespace NeatNet.NEAT.ComplexEntities
             int smallestBiggestInn = Math.Min(biggestLocalInn, biggestOtherInn);
 
             List<Link> listToTrim = biggestLocalInn > biggestOtherInn ? locLinks : otherLocLinks;
-            while (listToTrim[listToTrim.Count - 1].InnNumber > smallestBiggestInn &&
-                   listToTrim.Count > 0)
+            while (listToTrim.Count > 0 && listToTrim[listToTrim.Count - 1].InnNumber > smallestBiggestInn)
             {
                 listToTrim.RemoveAt(listToTrim.Count - 1);
                 exc++;
             }
 
-            for (int i = 0; i < LocalLinks.Count; i++)
+            for (int i = 0; i < locLinks.Count; i++)
             {
                 Link otherLink = otherLocLinks.Find(l => l.InnNumber == locLinks[i].InnNumber);
                 if (otherLink != null)
@@ -215,7 +222,5 @@ namespace NeatNet.NEAT.ComplexEntities
 
             return (c1 * exc) / N + (c2 * dis) / N + c3 * (delW / match);
         }
-        
-        
     }
 }

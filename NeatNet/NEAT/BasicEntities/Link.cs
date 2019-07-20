@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 
 namespace NeatNet.NEAT.BasicEntities
 {
+    [Serializable]
     public class Link
     {
         public Node Input { get; set; }

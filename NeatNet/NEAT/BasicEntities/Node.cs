@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace NeatNet.NEAT.BasicEntities
 {
+    [Serializable]
     public class Node
     {
         public double OldValue { get; set; } = 0;
@@ -17,7 +18,7 @@ namespace NeatNet.NEAT.BasicEntities
             Ancestors = new Dictionary<Node, double>();
         }
 
-        public double getValue()
+        public double GetValue()
         {
             if (_isCalculated || Ancestors.Count == 0)
             {
@@ -25,6 +26,7 @@ namespace NeatNet.NEAT.BasicEntities
             }
 
             double res = 0;
+            _isCalculated = true;
 
             foreach (KeyValuePair<Node, double> ancestor in Ancestors)
             {
@@ -33,12 +35,11 @@ namespace NeatNet.NEAT.BasicEntities
                     continue;
                 }
 
-                res += ancestor.Key.getValue() * ancestor.Value;
+                res += ancestor.Key.GetValue() * ancestor.Value;
             }
 
             res = Math.Max(0, res);
             OldValue = res;
-            _isCalculated = true;
             return res;
         }
 
@@ -48,13 +49,14 @@ namespace NeatNet.NEAT.BasicEntities
             {
                 return;
             }
+            _isCalculated = false;
 
             foreach (Node node in Ancestors.Keys)
             {
                 node.reset();
             }
 
-            _isCalculated = false;
+           
         }
 
         protected bool Equals(Node other)
@@ -73,6 +75,11 @@ namespace NeatNet.NEAT.BasicEntities
         public override int GetHashCode()
         {
             return (Id != null ? Id.GetHashCode() : 0);
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(Id)}: {Id}";
         }
     }
 }

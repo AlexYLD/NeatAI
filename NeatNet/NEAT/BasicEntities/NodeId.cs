@@ -1,5 +1,8 @@
+using System;
+
 namespace NeatNet.NEAT.BasicEntities
 {
+    [Serializable]
     public class NodeId
     {
         public int InnNumber { get; }
@@ -30,6 +33,11 @@ namespace NeatNet.NEAT.BasicEntities
             {
                 return (InnNumber * 397) ^ SplitNumber;
             }
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(InnNumber)}: {InnNumber}, {nameof(SplitNumber)}: {SplitNumber}";
         }
     }
 }

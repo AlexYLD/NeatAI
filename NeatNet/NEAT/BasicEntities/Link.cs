@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace NeatNet.NEAT.BasicEntities
 {
     public class Link
@@ -6,7 +8,6 @@ namespace NeatNet.NEAT.BasicEntities
         public Node Output { get; set; }
         public int InnNumber;
         public int SplitCount = 0;
-        public bool IsActive = true;
 
         public Link(Node input, Node output, int innNumber)
         {
@@ -35,6 +36,18 @@ namespace NeatNet.NEAT.BasicEntities
                 return ((Input != null ? Input.GetHashCode() : 0) * 397) ^ (Output != null ? Output.GetHashCode() : 0);
             }
         }
-        
+
+        private sealed class InnNumberRelationalComparer : IComparer<Link>
+        {
+            public int Compare(Link x, Link y)
+            {
+                if (ReferenceEquals(x, y)) return 0;
+                if (ReferenceEquals(null, y)) return 1;
+                if (ReferenceEquals(null, x)) return -1;
+                return x.InnNumber.CompareTo(y.InnNumber);
+            }
+        }
+
+        public static IComparer<Link> InnNumberComparer { get; } = new InnNumberRelationalComparer();
     }
 }

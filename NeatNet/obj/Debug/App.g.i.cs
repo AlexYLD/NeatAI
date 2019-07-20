@@ -9,7 +9,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-using NeatFinaly;
+using NeatNet;
 using System;
 using System.Diagnostics;
 using System.Windows;
@@ -32,7 +32,7 @@ using System.Windows.Shapes;
 using System.Windows.Shell;
 
 
-namespace NeatFinaly {
+namespace NeatNet.View {
     
     
     /// <summary>
@@ -61,7 +61,7 @@ namespace NeatFinaly {
         [System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "4.0.0.0")]
         public static void Main() {
-            NeatFinaly.App app = new NeatFinaly.App();
+            NeatNet.View.App app = new NeatNet.View.App();
             app.InitializeComponent();
             app.Run();
         }

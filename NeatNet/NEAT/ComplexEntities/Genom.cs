@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using NeatNet.NEAT.BasicEntities;
 using NeatNet.NEAT.Utils;
@@ -13,13 +14,34 @@ namespace NeatNet.NEAT.ComplexEntities
         public static HashSet<Link> AllLinks = new HashSet<Link>();
 
         public List<Link> LocalLinks = new List<Link>();
+
+        public List<Node> LocalNodes = new List<Node>();
         public List<Node> Inputs { get; set; } = new List<Node>();
         public List<Node> Hidden { get; set; } = new List<Node>();
         public List<Node> Outputs { get; set; } = new List<Node>();
 
-        public Genom Clone(Genom parent)
+        public double Fitness = 0;
+
+        public Genom(int inputCount, int outputCount)
         {
-            return ObjectCopier.Clone(parent);
+            for (int i = 0; i < inputCount; i++)
+            {
+                Node input = new Node(new NodeId(-2, i));
+                Inputs.Add(input);
+                LocalNodes.Add(input);
+            }
+
+            for (int i = 0; i < outputCount; i++)
+            {
+                Node output = new Node(new NodeId(-1, i));
+                Outputs.Add(output);
+                LocalNodes.Add(output);
+            }
+        }
+
+        public Genom Clone()
+        {
+            return ObjectCopier.Clone(this);
         }
 
 
@@ -46,14 +68,12 @@ namespace NeatNet.NEAT.ComplexEntities
             else
             {
                 output.Ancestors[input] = weight;
-                localLink.IsActive = true;
             }
         }
 
         private void DisableLink(Link link)
         {
             link.Output.Ancestors[link.Input] = 0;
-            link.IsActive = false;
         }
 
         public void AddNode(Link link)
@@ -63,7 +83,9 @@ namespace NeatNet.NEAT.ComplexEntities
             AddLink(newNode, link.Output, link.Output.Ancestors[link.Input]);
             DisableLink(link);
             Hidden.Add(newNode);
+            LocalNodes.Add(newNode);
         }
+
 
         public void AddRandomLink(Random rnd)
         {
@@ -83,14 +105,117 @@ namespace NeatNet.NEAT.ComplexEntities
             AddNode(LocalLinks[rnd.Next(LocalLinks.Count)]);
         }
 
-        public Genom Mate(Genom other)
+        public void MutateWeights(Random rnd)
         {
-            return null;
+            foreach (Link link in LocalLinks)
+            {
+                if (link.Output.Ancestors[link.Input] != 0)
+                {
+                    if (rnd.Next(100) < 90)
+                    {
+                        link.Output.Ancestors[link.Input] += rnd.NextDouble() - 0.5;
+                    }
+                    else
+                    {
+                        link.Output.Ancestors[link.Input] = rnd.NextDouble() * 10 - 5;
+                    }
+                }
+            }
         }
 
-        public double GetDifference(Genom other)
+        public Genom Mate(Genom other, Random rnd)
         {
-            return 0;
+            Genom child = new Genom(Inputs.Count, Outputs.Count);
+
+            bool thisGeneBetter = Fitness > other.Fitness;
+            List<Link> bestGenes = thisGeneBetter ? LocalLinks : other.LocalLinks;
+            List<Link> worstGenes = !thisGeneBetter ? LocalLinks : other.LocalLinks;
+            if (Fitness == other.Fitness)
+            {
+                bestGenes.AddRange(worstGenes);
+            }
+
+            foreach (Link link in bestGenes)
+            {
+                Node input = new Node(link.Input.Id);
+                if (!child.LocalNodes.Contains(input))
+                {
+                    child.Hidden.Add(input);
+                    child.LocalNodes.Add(input);
+                }
+                else
+                {
+                    input = child.LocalNodes.Find(n => n.Equals(input));
+                }
+
+                Node output = new Node(link.Output.Id);
+                if (!child.LocalNodes.Contains(output))
+                {
+                    child.Hidden.Add(output);
+                    child.LocalNodes.Add(output);
+                }
+                else
+                {
+                    output = child.LocalNodes.Find(n => n.Equals(output));
+                }
+
+                double weight = link.Output.Ancestors[link.Input];
+                if (rnd.Next(2) == 0 && worstGenes.Contains(link))
+                {
+                    Link worseLink = worstGenes.Find(l => l.Equals(link));
+                    weight = worseLink.Output.Ancestors[worseLink.Input];
+                }
+
+                child.AddLink(input, output, weight);
+            }
+
+            return child;
         }
+
+        public double GetDistance(Genom other, double c1, double c2, double c3)
+        {
+            double N = 1;
+            double delW = 0;
+            int match = 0;
+            int exc = 0;
+            int dis = 0;
+
+            List<Link> locLinks = new List<Link>(LocalLinks);
+            List<Link> otherLocLinks = new List<Link>(other.LocalLinks);
+
+            locLinks.Sort(Link.InnNumberComparer);
+            otherLocLinks.Sort(Link.InnNumberComparer);
+
+            int biggestLocalInn = locLinks[locLinks.Count - 1].InnNumber;
+            int biggestOtherInn = otherLocLinks[otherLocLinks.Count - 1].InnNumber;
+            int smallestBiggestInn = Math.Min(biggestLocalInn, biggestOtherInn);
+
+            List<Link> listToTrim = biggestLocalInn > biggestOtherInn ? locLinks : otherLocLinks;
+            while (listToTrim[listToTrim.Count - 1].InnNumber > smallestBiggestInn &&
+                   listToTrim.Count > 0)
+            {
+                listToTrim.RemoveAt(listToTrim.Count - 1);
+                exc++;
+            }
+
+            for (int i = 0; i < LocalLinks.Count; i++)
+            {
+                Link otherLink = otherLocLinks.Find(l => l.InnNumber == locLinks[i].InnNumber);
+                if (otherLink != null)
+                {
+                    match++;
+                    delW += Math.Abs(locLinks[i].Output.Ancestors[locLinks[i].Input] -
+                                     otherLink.Output.Ancestors[otherLink.Input]);
+                    locLinks.RemoveAt(i);
+                    otherLocLinks.Remove(otherLink);
+                }
+            }
+
+            dis = locLinks.Count + otherLocLinks.Count;
+
+            return (c1 * exc) / N + (c2 * dis) / N + c3 * (delW / match);
+        }
+        
+        
     }
 }

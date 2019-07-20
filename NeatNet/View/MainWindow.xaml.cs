@@ -1,4 +1,6 @@
-﻿namespace NeatNet.View
+﻿using System.Windows;
+
+namespace NeatNet.View
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -8,6 +10,11 @@
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+        {
+            
         }
     }
 }

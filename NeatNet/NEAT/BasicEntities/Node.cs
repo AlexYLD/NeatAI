@@ -28,6 +28,11 @@ namespace NeatNet.NEAT.BasicEntities
 
             foreach (KeyValuePair<Node, double> ancestor in Ancestors)
             {
+                if (ancestor.Value == 0)
+                {
+                    continue;
+                }
+
                 res += ancestor.Key.getValue() * ancestor.Value;
             }
 

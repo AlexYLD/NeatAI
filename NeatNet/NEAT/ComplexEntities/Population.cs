@@ -36,7 +36,7 @@ namespace NeatNet.NEAT.ComplexEntities
             {
                 Genom representative = oldSpicie[rnd.Next(oldSpicie.Count)];
                 newSpecies.Add(representative, new List<Genom>());
-                newSpecies[representative].Add(representative);
+                //newSpecies[representative].Add(representative);
             }
 
             bool isUniq;
@@ -60,7 +60,16 @@ namespace NeatNet.NEAT.ComplexEntities
                 }
             }
 
-            _species = newSpecies;
+            _species = new Dictionary<Genom, List<Genom>>(newSpecies);
+            foreach (Genom key in newSpecies.Keys)
+            {
+                if (newSpecies[key].Count == 0)
+                {
+                    _species.Remove(key);
+                }
+            }
+
+            Console.WriteLine("Specie Count: " +_species.Count);
         }
 
         public Genom GetBest(List<Genom> group)
@@ -102,15 +111,17 @@ namespace NeatNet.NEAT.ComplexEntities
             foreach (List<Genom> spicie in speciesFitness.Keys)
             {
                 Genom best = GetBest(spicie);
-
                 foreach (Genom genom in spicie)
                 {
-                    int childrenCount = (int) Math.Round(speciesFitness[spicie] / totalSum * Amount * genom.Fitness /
-                                                         speciesFitness[spicie]);
+                    int childrenCount =
+                        (int) Math.Round(speciesFitness[spicie] / totalSum * Amount * genom.Fitness /
+                                         speciesFitness[spicie]);
                     if (childrenCount == 0)
                     {
                         continue;
                     }
+
+                    //Console.WriteLine(genom.Fitness + " " + childrenCount);
 
                     if (genom.Equals(best))
                     {
@@ -121,7 +132,7 @@ namespace NeatNet.NEAT.ComplexEntities
                     for (int i = 0; i < childrenCount; i++)
                     {
                         Genom child;
-                        if (rnd.NextDouble() <= 1)
+                        if (rnd.NextDouble() <= 0.25)
                         {
                             child = genom.Clone();
                             if (rnd.NextDouble() <= 0.8)
@@ -162,23 +173,8 @@ namespace NeatNet.NEAT.ComplexEntities
 
         private double CalcAdjFitness(Genom genom)
         {
-            if (genom.GetDistance(genom, C1, C2, C3) != 0)
-            {
-                Console.WriteLine("Stary");
-                foreach (var link in genom.LocalLinks)
-                {
-                    Console.WriteLine(link.Input + "->" + link.Output);
-                }
+            int count = AllNets.Count(g => g.GetDistance(genom, C1, C2, C3) <= DistThreshold);
 
-                Console.WriteLine("end");
-            }
-
-            int count = AllNets.Count(g => g.GetDistance(genom, C1, C2, C3) < DistThreshold);
-            if (count == 0)
-            {
-                Console.WriteLine("Fuck0");
-                count = 1;
-            }
 
             return genom.Fitness / count;
         }

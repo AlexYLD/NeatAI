@@ -16,6 +16,7 @@ namespace NeatNet.View
     {
         List<Dot> field = new List<Dot>();
         private const int fieldSide = 30;
+        private int timeout = 30;
 
         public MainWindow()
         {
@@ -26,6 +27,18 @@ namespace NeatNet.View
                 MainGrid.RowDefinitions.Add(new RowDefinition());
             }
 
+            MainGrid.RowDefinitions.Add(new RowDefinition());
+            TextBox speed = new TextBox();
+            Grid.SetRow(speed, fieldSide + 1);
+            Grid.SetColumn(speed, 0);
+            Grid.SetColumnSpan(speed, 4);
+            MainGrid.Children.Add(speed);
+            Button update = new Button();
+            Grid.SetRow(update, fieldSide + 1);
+            Grid.SetColumn(update, 5);
+            Grid.SetColumnSpan(speed, 4);
+            MainGrid.Children.Add(update);
+            update.Click += (e,s) => timeout = int.Parse(speed.Text);
             for (int i = 0; i < fieldSide; i++)
             {
                 for (int j = 0; j < fieldSide; j++)
@@ -48,7 +61,7 @@ namespace NeatNet.View
                 Population population = new Population(4, 4);
                 Genom best = population.AllNets[0];
                 int i = 0;
-              
+
                 while (true)
                 {
                     foreach (Genom brain in population.AllNets)
@@ -71,7 +84,7 @@ namespace NeatNet.View
                         {
                             if (game.Brain.Equals(best))
                             {
-                                Thread.Sleep(100);
+                                Thread.Sleep(timeout);
                             }
                         }
 
@@ -87,7 +100,7 @@ namespace NeatNet.View
 
                     population.NextGen();
                     best = population.GetBest(population.AllNets);
-                    Console.WriteLine("gen:" + i++ + "Count: " + population.AllNets.Count);
+                    Console.WriteLine("gen:" + i++ + " Count: " + population.AllNets.Count + " cons "+best.LocalLinks.Count);
                 }
             }).Start();
         }

@@ -64,7 +64,6 @@ namespace NeatNet.NEAT.ComplexEntities
             Link localLink = LocalLinks.Find(l => l.Equals(link));
             if (localLink == null)
             {
-                Console.WriteLine("EXIST");
                 output.Ancestors.Add(input, weight);
                 LocalLinks.Add(link);
             }
@@ -104,7 +103,7 @@ namespace NeatNet.NEAT.ComplexEntities
                 return;
             }
 
-            double weight = rnd.NextDouble() * 10 - 5;
+            double weight = rnd.NextDouble() * 2 - 1;
             AddLink(input, output, weight);
         }
 
@@ -121,11 +120,11 @@ namespace NeatNet.NEAT.ComplexEntities
                 {
                     if (rnd.Next(100) < 90)
                     {
-                        link.Output.Ancestors[link.Input] += rnd.NextDouble() - 0.5;
+                        link.Output.Ancestors[link.Input] += rnd.NextDouble() - 0.1;
                     }
                     else
                     {
-                        link.Output.Ancestors[link.Input] = rnd.NextDouble() * 10 - 5;
+                        link.Output.Ancestors[link.Input] = rnd.NextDouble() * 2 - 1;
                     }
                 }
             }
@@ -140,7 +139,10 @@ namespace NeatNet.NEAT.ComplexEntities
             List<Link> worstGenes = !thisGeneBetter ? LocalLinks : other.LocalLinks;
             if (Fitness == other.Fitness)
             {
-                bestGenes.AddRange(worstGenes);
+                worstGenes.ForEach(g =>
+                {
+                    if (!bestGenes.Contains(g)) bestGenes.Add(g);
+                });
             }
 
             foreach (Link link in bestGenes)
@@ -193,7 +195,7 @@ namespace NeatNet.NEAT.ComplexEntities
 
             locLinks.Sort(Link.InnNumberComparer);
             otherLocLinks.Sort(Link.InnNumberComparer);
-
+            N = locLinks.Count > otherLocLinks.Count ? locLinks.Count : otherLocLinks.Count;
             int biggestLocalInn = locLinks[locLinks.Count - 1].InnNumber;
             int biggestOtherInn = otherLocLinks[otherLocLinks.Count - 1].InnNumber;
             int smallestBiggestInn = Math.Min(biggestLocalInn, biggestOtherInn);
@@ -215,10 +217,15 @@ namespace NeatNet.NEAT.ComplexEntities
                                      otherLink.Output.Ancestors[otherLink.Input]);
                     locLinks.RemoveAt(i);
                     otherLocLinks.Remove(otherLink);
+                    i--;
                 }
             }
 
             dis = locLinks.Count + otherLocLinks.Count;
+            if (match == 0)
+            {
+                match = 1;
+            }
 
             return (c1 * exc) / N + (c2 * dis) / N + c3 * (delW / match);
         }

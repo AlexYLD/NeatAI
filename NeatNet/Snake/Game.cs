@@ -54,7 +54,7 @@ namespace NeatNet.Snake
             double rightOut = Brain.Outputs[1].GetValue();
             double upOut = Brain.Outputs[2].GetValue();
             double downOut = Brain.Outputs[3].GetValue();
-            
+            //Console.WriteLine($@"Up:{upOut} Down {downOut} Left {leftOut} Right {rightOut}");
             foreach (Node output in Brain.Outputs)
             {
                 output.reset();
@@ -125,6 +125,14 @@ namespace NeatNet.Snake
             }
             else
             {
+                int rndX = rnd.Next(15);
+                int rndY = rnd.Next(15);
+                _apple = _field.Find(d => d.X == rndX && d.Y == rndY);
+
+                if (_apple.Label != null)
+                {
+                    Window.PaintDot(_apple, DotStatus.Apple);
+                }
                 Score += 10;
             }
 

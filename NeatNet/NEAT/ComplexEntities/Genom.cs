@@ -109,6 +109,10 @@ namespace NeatNet.NEAT.ComplexEntities
 
         public void AddRandomNode(Random rnd)
         {
+            if (LocalLinks.Count == 0)
+            {
+                return;
+            }
             AddNode(LocalLinks[rnd.Next(LocalLinks.Count)]);
         }
 
@@ -118,9 +122,9 @@ namespace NeatNet.NEAT.ComplexEntities
             {
                 if (link.Output.Ancestors[link.Input] != 0)
                 {
-                    if (rnd.Next(100) < 90)
+                    if (rnd.NextDouble() < 0.9)
                     {
-                        link.Output.Ancestors[link.Input] += rnd.NextDouble() - 0.1;
+                        link.Output.Ancestors[link.Input] += rnd.NextDouble() * 0.4 - 0.2;
                     }
                     else
                     {
@@ -184,7 +188,7 @@ namespace NeatNet.NEAT.ComplexEntities
 
         public double GetDistance(Genom other, double c1, double c2, double c3)
         {
-            double N = 1;
+            double N =  Math.Max(other.LocalLinks.Count, LocalLinks.Count);
             double delW = 0;
             int match = 0;
             int exc = 0;
@@ -195,9 +199,13 @@ namespace NeatNet.NEAT.ComplexEntities
 
             locLinks.Sort(Link.InnNumberComparer);
             otherLocLinks.Sort(Link.InnNumberComparer);
-            N = locLinks.Count > otherLocLinks.Count ? locLinks.Count : otherLocLinks.Count;
-            int biggestLocalInn = locLinks[locLinks.Count - 1].InnNumber;
-            int biggestOtherInn = otherLocLinks[otherLocLinks.Count - 1].InnNumber;
+            if (locLinks.Count < 30 && otherLocLinks.Count < 30)
+            {
+                N = 1;
+            }
+
+            int biggestLocalInn = locLinks.Count == 0 ? -1 : locLinks[locLinks.Count - 1].InnNumber;
+            int biggestOtherInn = otherLocLinks.Count == 0 ? -1 : otherLocLinks[otherLocLinks.Count - 1].InnNumber;
             int smallestBiggestInn = Math.Min(biggestLocalInn, biggestOtherInn);
 
             List<Link> listToTrim = biggestLocalInn > biggestOtherInn ? locLinks : otherLocLinks;

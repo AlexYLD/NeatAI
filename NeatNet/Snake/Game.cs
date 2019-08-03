@@ -10,134 +10,257 @@ namespace NeatNet.Snake
     public class Game
     {
         private static Random rnd = new Random();
-        private List<Dot> _field;
+        private Dot[,] _field;
         public LinkedList<Dot> _snake = new LinkedList<Dot>();
-        public Dot _apple;
+        private Dot _apple;
         public Genom Brain;
-        public int Score;
+        public int Distance;
+        public int AppleScore;
         public MainWindow Window;
 
-        public Game(List<Dot> field, Genom brain, MainWindow window)
+        public Game(Genom brain, MainWindow window)
         {
+            int fieldSide = 30;
             Window = window;
-            _field = field;
-            Brain = brain;
-            int fieldSide = (int) Math.Sqrt(_field.Count);
-            for (int i = 0; i < 4; i++)
+            if (Window != null)
             {
-                _snake.AddLast(field.Find(d => d.X == fieldSide / 2 + i && d.Y == fieldSide / 2));
-                if (_snake.Last.Value.Label != null)
+                _field = Window.field;
+            }
+            else
+            {
+                _field = new Dot[fieldSide, fieldSide];
+                for (int i = 0; i < fieldSide; i++)
                 {
-                    window.PaintDot(_snake.Last.Value, DotStatus.Snake);
+                    for (int j = 0; j < fieldSide; j++)
+                    {
+                        Dot dot = new Dot(j, i, null);
+                        _field[j, i] = dot;
+                    }
                 }
             }
 
-            int rndX = rnd.Next(fieldSide);
-            int rndY = rnd.Next(fieldSide / 2);
-            _apple = _field.Find(d => d.X == rndX && d.Y == rndY);
+            Brain = brain;
 
-            if (_apple.Label != null)
+
+            for (int i = 0; i < 4; i++)
             {
-                window.PaintDot(_apple, DotStatus.Apple);
+                _snake.AddLast(_field[fieldSide / 2 + i, fieldSide / 2]);
+
+                ChangeDotStatus(_snake.Last.Value, DotStatus.Snake);
             }
+
+            while (_apple == null || _snake.Contains(_apple))
+            {
+                int rndX = rnd.Next(fieldSide);
+                int rndY = rnd.Next(fieldSide);
+                _apple = _field[rndX, rndY];
+            }
+
+
+            ChangeDotStatus(_apple, DotStatus.Apple);
         }
+
+        private void ChangeDotStatus(Dot dot, DotStatus status)
+        {
+            dot.status = status;
+            Window?.PaintDot(dot, status);
+        }
+
 
         public bool move()
         {
+            int fieldSide = _field.GetLength(0);
             Dot head = _snake.First.Value;
-            Brain.Inputs[0].OldValue = head.X;
-            Brain.Inputs[1].OldValue = head.Y;
-            Brain.Inputs[2].OldValue = _apple.X;
-            Brain.Inputs[3].OldValue = _apple.Y;
-            
+            Dot neck = _snake.First.Next.Value;
+            int delX = head.X - neck.X;
+            int delY = head.Y - neck.Y;
+
+            SetInputs(fieldSide, head, delY, delX);
+
+
             double leftOut = Brain.Outputs[0].GetValue();
             double rightOut = Brain.Outputs[1].GetValue();
-            double upOut = Brain.Outputs[2].GetValue();
-            double downOut = Brain.Outputs[3].GetValue();
+            double straightOut = Brain.Outputs[2].GetValue();
             //Console.WriteLine($@"Up:{upOut} Down {downOut} Left {leftOut} Right {rightOut}");
             foreach (Node output in Brain.Outputs)
             {
                 output.reset();
             }
 
-            double max = Math.Max(leftOut, Math.Max(rightOut, Math.Max(upOut, downOut)));
+            double max = Math.Max(leftOut, Math.Max(rightOut, straightOut));
             Dot nextDot;
 
             if (max == leftOut)
             {
-                nextDot = new Dot(head.X - 1, head.Y);
-                if (nextDot.Equals(_snake.First.Next.Value))
-                {
-                    nextDot = new Dot(head.X + 1, head.Y);
-                }
+                nextDot = new Dot(head.X + delY, head.Y + delX);
             }
             else if (max == rightOut)
             {
-                nextDot = new Dot(head.X + 1, head.Y);
-                if (nextDot.Equals(_snake.First.Next.Value))
-                {
-                    nextDot = new Dot(head.X - 1, head.Y);
-                }
-            }
-            else if (max == upOut)
-            {
-                nextDot = new Dot(head.X, head.Y - 1);
-                if (nextDot.Equals(_snake.First.Next.Value))
-                {
-                    nextDot = new Dot(head.X, head.Y + 1);
-                }
+                nextDot = new Dot(head.X - delY, head.Y - delX);
             }
             else
             {
-                nextDot = new Dot(head.X, head.Y + 1);
-                if (nextDot.Equals(_snake.First.Next.Value))
-                {
-                    nextDot = new Dot(head.X, head.Y - 1);
-                }
+                nextDot = new Dot(head.X + delX, head.Y + delY);
             }
 
-            if (!_field.Contains(nextDot))
+
+            if (nextDot.X >= fieldSide || nextDot.Y >= fieldSide ||
+                nextDot.X < 0 || nextDot.Y < 0)
             {
+                SetScore();
                 return false;
             }
 
-            nextDot = _field.Find(d => d.Equals(nextDot));
+            nextDot = _field[nextDot.X, nextDot.Y];
 
-            /*if (!nextDot.Equals(_snake.Last.Value) && _snake.Contains(nextDot))
+            if (_snake.Contains(nextDot) && !nextDot.Equals(_snake.Last.Value))
             {
+                SetScore();
                 return false;
-            }*/
-
-            _snake.AddFirst(nextDot);
-            if (nextDot.Label != null)
-            {
-                Window.PaintDot(nextDot, DotStatus.Snake);
             }
+
 
             if (!nextDot.Equals(_apple))
             {
-                if (_snake.Last.Value.Label != null)
-                {
-                    Window.PaintDot(_snake.Last.Value, DotStatus.Field);
-                }
-
+                ChangeDotStatus(_snake.Last.Value, DotStatus.Field);
                 _snake.RemoveLast();
             }
             else
             {
-                int rndX = rnd.Next(15);
-                int rndY = rnd.Next(15);
-                _apple = _field.Find(d => d.X == rndX && d.Y == rndY);
-
-                if (_apple.Label != null)
+                _apple = null;
+                while (_apple == null || _snake.Contains(_apple))
                 {
-                    Window.PaintDot(_apple, DotStatus.Apple);
+                    int rndX = rnd.Next(fieldSide);
+                    int rndY = rnd.Next(fieldSide);
+                    _apple = _field[rndX, rndY];
                 }
-                Score += 10;
+
+                ChangeDotStatus(_apple, DotStatus.Apple);
+                AppleScore++;
             }
 
-            Score++;
+            _snake.AddFirst(nextDot);
+            ChangeDotStatus(nextDot, DotStatus.Snake);
+
+
+            Distance++;
+            if (Distance / 120 > AppleScore)
+            {
+                SetScore();
+                return false;
+            }
+
             return true;
+        }
+
+        private void SetScore()
+        {
+            Brain.Fitness = AppleScore * 1000 + (AppleScore < 15 ? Distance : -Distance);
+        }
+
+        private void SetInputs(double fieldSide, Dot head, int delY, int delX)
+        {
+            /*for (int i = 1; i <= fieldSide; i++)
+            {
+                if (head.Y + delY * i >= fieldSide || head.X + delX * i >= fieldSide ||
+                    head.Y + delY * i < 0 || head.X + delX * i < 0 ||
+                    _field[head.X + delX * i, head.Y + delY * i].status.Equals(DotStatus.Snake))
+                {
+                    Brain.Inputs[0].OldValue = i - 1;
+                    break;
+                }
+
+                if (_field[head.X + delX * i, head.Y + delY * i].status.Equals(DotStatus.Apple))
+                {
+                    Brain.Inputs[0].OldValue = -(fieldSide - 1) + i;
+                    break;
+                }
+            }
+
+            for (int j = 1; j <= 2; j++)
+            {
+                for (int i = 1; i <= fieldSide; i++)
+                {
+                    if (head.Y + delX * i >= fieldSide || head.X + delY * i >= fieldSide ||
+                        head.Y + delX * i < 0 || head.X + delY * i < 0 ||
+                        _field[head.X + delY * i, head.Y + delX * i].status.Equals(DotStatus.Snake))
+                    {
+                        Brain.Inputs[j].OldValue = i - 1;
+                        break;
+                    }
+
+                    if (_field[head.X + delY * i, head.Y + delX * i].status.Equals(DotStatus.Apple))
+                    {
+                        Brain.Inputs[j].OldValue = -(fieldSide - 1) + i;
+                        break;
+                    }
+                }
+
+                delX = -delX;
+                delY = -delY;
+            }
+
+            int sumY = -(delX + delY);
+            int sumX = sumY;
+            for (int j = 3; j <= 6; j++)
+            {
+                for (int i = 1; i <= fieldSide * 2; i++)
+                {
+                    if (head.Y + sumY * i >= fieldSide || head.X + sumX * i >= fieldSide ||
+                        head.Y + sumY * i < 0 || head.X + sumX * i < 0 ||
+                        _field[head.X + sumX * i, head.Y + sumY * i].status.Equals(DotStatus.Snake))
+                    {
+                        Brain.Inputs[j].OldValue = i - 1;
+                        break;
+                    }
+
+                    if (_field[head.X + sumX * i, head.Y + sumY * i].status.Equals(DotStatus.Apple))
+                    {
+                        Brain.Inputs[j].OldValue = -(fieldSide - 1) + i;
+                        break;
+                    }
+                }
+
+                if (j == 3 || j == 5)
+                {
+                    sumX = -sumX;
+                }
+
+                if (j == 4)
+                {
+                    sumX = -sumX;
+                    sumY = -sumY;
+                }
+            }*/
+            Brain.Inputs[0].OldValue = head.Y + delY >= fieldSide || head.X + delX >= fieldSide ||
+                                       head.Y + delY < 0 || head.X + delX < 0 ||
+                                       _field[head.X + delX, head.Y + delY].status.Equals(DotStatus.Snake)
+                ? 1
+                : 0;
+            Brain.Inputs[1].OldValue = head.Y + delX >= fieldSide || head.X + delY >= fieldSide ||
+                                       head.Y + delX < 0 || head.X + delY < 0 ||
+                                       _field[head.X + delY, head.Y + delX].status.Equals(DotStatus.Snake)
+                ? 1
+                : 0;
+            Brain.Inputs[2].OldValue = head.Y - delX >= fieldSide || head.X - delY >= fieldSide ||
+                                       head.Y - delX < 0 || head.X - delY < 0 ||
+                                       _field[head.X - delY, head.Y - delX].status.Equals(DotStatus.Snake)
+                ? 1
+                : 0;
+            Brain.Inputs[3].OldValue = head.X == _apple.X ? 0 : head.X > _apple.X ? 1 : -1;
+            Brain.Inputs[4].OldValue = head.Y == _apple.Y ? 0 : head.Y > _apple.Y ? 1 : -1;
+            Brain.Inputs[5].OldValue = delX;
+            Brain.Inputs[6].OldValue = delY;
+        }
+
+        public void clearField()
+        {
+            foreach (Dot dot in _snake)
+            {
+                ChangeDotStatus(dot, DotStatus.Field);
+            }
+
+            ChangeDotStatus(_apple, DotStatus.Field);
         }
     }
 }

@@ -1,19 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using NeatNet.NEAT.BasicEntities;
 using NeatNet.NEAT.Utils;
 
 namespace NeatNet.NEAT.ComplexEntities
 {
     public class Population
     {
-        private const double DistThreshold = 3.0;
+        private const double DistThreshold = 3;
         private const double C1 = 1;
         private const double C2 = 1;
-        private const double C3 = 0.4;
+        private const double C3 = 3;
         private const int Amount = 150;
         public List<Genom> AllNets = new List<Genom>();
-        Dictionary<Genom, List<Genom>> _species = new Dictionary<Genom, List<Genom>>();
+        public Dictionary<Genom, List<Genom>> _species = new Dictionary<Genom, List<Genom>>();
         Random rnd = new Random();
 
         public Population(int inCount, int outCount)
@@ -21,8 +22,14 @@ namespace NeatNet.NEAT.ComplexEntities
             for (int i = 0; i < Amount; i++)
             {
                 Genom genom = new Genom(inCount, outCount);
-                genom.AddLink(genom.Inputs[rnd.Next(inCount)], genom.Outputs[rnd.Next(outCount)],
-                    rnd.NextDouble() * 10 - 5);
+                foreach (Node input in genom.Inputs)
+                {
+                    foreach (Node output in genom.Outputs)
+                    {
+                        genom.AddLink(input, output, rnd.NextDouble() * 2 - 1);
+                    }
+                }
+
                 AllNets.Add(genom);
             }
 
@@ -34,6 +41,11 @@ namespace NeatNet.NEAT.ComplexEntities
             Dictionary<Genom, List<Genom>> newSpecies = new Dictionary<Genom, List<Genom>>();
             foreach (List<Genom> oldSpicie in _species.Values)
             {
+                if (oldSpicie.Count == 0)
+                {
+                    continue;
+                }
+
                 Genom representative = oldSpicie[rnd.Next(oldSpicie.Count)];
                 newSpecies.Add(representative, new List<Genom>());
                 //newSpecies[representative].Add(representative);
@@ -45,7 +57,7 @@ namespace NeatNet.NEAT.ComplexEntities
                 isUniq = true;
                 foreach (Genom specieRepresentative in newSpecies.Keys)
                 {
-                    if (genom.GetDistance(specieRepresentative, C1, C2, C3) < DistThreshold)
+                    if (genom.GetDistance(specieRepresentative, C1, C2, C3) <= DistThreshold)
                     {
                         newSpecies[specieRepresentative].Add(genom);
                         isUniq = false;
@@ -68,8 +80,6 @@ namespace NeatNet.NEAT.ComplexEntities
                     _species.Remove(key);
                 }
             }
-
-            Console.WriteLine("Specie Count: " +_species.Count);
         }
 
         public Genom GetBest(List<Genom> group)
@@ -89,45 +99,57 @@ namespace NeatNet.NEAT.ComplexEntities
 
         public void NextGen()
         {
-            Dictionary<List<Genom>, double> speciesFitness = new Dictionary<List<Genom>, double>();
             double totalSum = 0;
-            foreach (List<Genom> spicie in _species.Values)
+            List<Genom> newPopulation = new List<Genom>();
+            List<Genom> bests = new List<Genom>();
+            foreach (List<Genom> specie in _species.Values)
             {
-                double speFitSum = 0;
-                foreach (Genom genom in spicie)
+                specie.Sort((g, g1) =>
                 {
-                    double adjFitness = CalcAdjFitness(genom);
-                    genom.Fitness = adjFitness;
-                    speFitSum += adjFitness;
+                    if (g.Fitness > g1.Fitness) return -1;
+                    if (g.Fitness < g1.Fitness) return 1;
+                    return 0;
+                });
+                if (specie.Count >= 5)
+                {
+                    bests.Add(specie[0]);
                 }
 
-                totalSum += speFitSum;
-                speciesFitness.Add(spicie, speFitSum);
+
+                for (int i = 0; i <= specie.Count / 2; i++)
+                {
+                    double adjFitness = specie[i].Fitness / specie.Count;
+                    specie[i].Fitness = adjFitness;
+                    totalSum += adjFitness;
+                }
+
+                int specieCount = specie.Count;
+                for (int i = specieCount - 1; i > specieCount / 2; i--)
+                {
+                    AllNets.Remove(specie[i]);
+                    specie.RemoveAt(i);
+                }
             }
 
-
-            List<Genom> newPopulation = new List<Genom>();
-
-            foreach (List<Genom> spicie in speciesFitness.Keys)
+            foreach (List<Genom> specie in _species.Values)
             {
-                Genom best = GetBest(spicie);
-                foreach (Genom genom in spicie)
+                foreach (Genom genom in specie)
                 {
                     int childrenCount =
-                        (int) Math.Round(speciesFitness[spicie] / totalSum * Amount * genom.Fitness /
-                                         speciesFitness[spicie]);
-                    if (childrenCount == 0)
+                        (int) Math.Round(Amount * (genom.Fitness / totalSum));
+
+                    if (bests.Contains(genom))
+                    {
+                        childrenCount--;
+                        genom.Fitness = 0;
+                        newPopulation.Add(genom);
+                    }
+
+                    if (childrenCount <= 0)
                     {
                         continue;
                     }
 
-                    //Console.WriteLine(genom.Fitness + " " + childrenCount);
-
-                    if (genom.Equals(best))
-                    {
-                        childrenCount--;
-                        newPopulation.Add(ObjectCopier.Clone(genom));
-                    }
 
                     for (int i = 0; i < childrenCount; i++)
                     {
@@ -158,7 +180,7 @@ namespace NeatNet.NEAT.ComplexEntities
                             }
                             else
                             {
-                                child = genom.Mate(spicie[rnd.Next(spicie.Count)], rnd);
+                                child = genom.Mate(specie[rnd.Next(specie.Count)], rnd);
                             }
                         }
 

@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using NeatNet.NEAT.ComplexEntities;
 
 namespace NeatNet.NEAT.Utils
 {
@@ -26,7 +28,7 @@ namespace NeatNet.NEAT.Utils
             }
 
             // Don't serialize a null object, simply return the default for that object
-            if (Object.ReferenceEquals(source, null))
+            if (ReferenceEquals(source, null))
             {
                 return default(T);
             }
@@ -37,7 +39,45 @@ namespace NeatNet.NEAT.Utils
             {
                 formatter.Serialize(stream, source);
                 stream.Seek(0, SeekOrigin.Begin);
-                return (T)formatter.Deserialize(stream);
+                return (T) formatter.Deserialize(stream);
+            }
+        }
+
+        public static void Save<T>(T source, string path)
+        {
+            if (!typeof(T).IsSerializable)
+            {
+                throw new ArgumentException("The type must be serializable.", "source");
+            }
+
+            // Don't serialize a null object, simply return the default for that object
+            if (ReferenceEquals(source, null))
+            {
+                return;
+            }
+
+            IFormatter formatter = new BinaryFormatter();
+            var currentDirectory = path;
+            Stream stream = File.Create(Path.Combine(currentDirectory));
+            using (stream)
+            {
+                formatter.Serialize(stream, source);
+            }
+        }
+
+        public static T Load<T>(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                return default(T);
+            }
+
+            IFormatter formatter = new BinaryFormatter();
+            Stream stream = new FileStream(path, FileMode.Open);
+            using (stream)
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+                return (T) formatter.Deserialize(stream);
             }
         }
     }

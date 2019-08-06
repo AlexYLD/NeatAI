@@ -184,7 +184,7 @@ namespace NeatNet.View
                 {
                     int gen = 0;
                     double bestScore = 0;
-                    Population population = new Population(7, 3);
+                    Population population = new Population(7, 3, true);
                     _best = population.AllNets[0];
                     while (!_newPop)
                     {

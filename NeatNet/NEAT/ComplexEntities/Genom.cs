@@ -199,7 +199,7 @@ namespace NeatNet.NEAT.ComplexEntities
 
             locLinks.Sort(Link.InnNumberComparer);
             otherLocLinks.Sort(Link.InnNumberComparer);
-            if (locLinks.Count < 30 && otherLocLinks.Count < 30)
+            if (locLinks.Count < 40 && otherLocLinks.Count < 40)
             {
                 N = 1;
             }

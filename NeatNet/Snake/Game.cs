@@ -155,7 +155,7 @@ namespace NeatNet.Snake
 
         private void SetScore()
         {
-            Brain.Fitness = AppleScore * 1000 + (AppleScore < 15 ? Distance : -Distance);
+            Brain.Fitness = AppleScore * 1000;// + (AppleScore < 15 ? Distance : -Distance);
         }
 
         private void SetInputs(double fieldSide, Dot head, int delY, int delX)

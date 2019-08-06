@@ -39,6 +39,7 @@ namespace NeatNet.NEAT.BasicEntities
             }
 
             res = Math.Max(0, res);
+            //res = 1 / (1 + Math.Pow(Math.E, -4.9 * res));
             OldValue = res;
             return res;
         }

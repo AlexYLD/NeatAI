@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NeatNet.NEAT.BasicEntities;
-using NeatNet.NEAT.Utils;
 
 namespace NeatNet.NEAT.ComplexEntities
 {
@@ -11,22 +9,33 @@ namespace NeatNet.NEAT.ComplexEntities
         private const double DistThreshold = 3;
         private const double C1 = 1;
         private const double C2 = 1;
-        private const double C3 = 3;
+        private const double C3 = 0.4;
         private const int Amount = 150;
         public List<Genom> AllNets = new List<Genom>();
         public Dictionary<Genom, List<Genom>> _species = new Dictionary<Genom, List<Genom>>();
         Random rnd = new Random();
 
-        public Population(int inCount, int outCount)
+        public Population(int inCount, int outCount, bool bias)
         {
+            if (bias)
+            {
+                inCount++;
+            }
+
             for (int i = 0; i < Amount; i++)
             {
                 Genom genom = new Genom(inCount, outCount);
-                foreach (Node input in genom.Inputs)
+                for (int k = 0; k < inCount; k++)
                 {
-                    foreach (Node output in genom.Outputs)
+                    if (k == inCount - 1 && bias)
                     {
-                        genom.AddLink(input, output, rnd.NextDouble() * 2 - 1);
+                        genom.Inputs[k].OldValue = 1;
+                        continue;
+                    }
+
+                    for (int j = 0; j < outCount; j++)
+                    {
+                        genom.AddLink(genom.Inputs[k], genom.Outputs[j], rnd.NextDouble() * 2 - 1);
                     }
                 }
 
@@ -183,6 +192,7 @@ namespace NeatNet.NEAT.ComplexEntities
                                 child = genom.Mate(specie[rnd.Next(specie.Count)], rnd);
                             }
                         }
+
 
                         newPopulation.Add(child);
                     }
